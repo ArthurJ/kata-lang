@@ -1,7 +1,7 @@
 from time import process_time
 from functools import wraps
 
-def timer(msg="Exec time: {0:.6f}s"):
+def timer(msg="Exec time: {0:.7f}s"):
     def decorador(method):
         @wraps(method)
         def wrapper(*args, **kw):
@@ -66,16 +66,16 @@ def literal_val(val):
         return float(val)
     
 
-def interpret(token_list, stack=[], stop=False, fun_map=std_lib_funs):
-    if not token_list: 
-        return stack
+def interpret(token_list,stop=False, stack=None, fun_map=std_lib_funs):
+    if not stack: stack=[]
+    if not token_list: return stack
     
     token = token_list.pop(0)
     if token in fun_map:  # if function
         stack.append(fun_map[token][1])
         for _ in range(fun_map[token][0]):
             if token_list[0] in fun_map:
-                stack.append(interpret(token_list, [], True))
+                stack.append(interpret(token_list, True))
             else: 
                 stack.append(literal_val(token_list.pop(0)))
     else: # if literal
@@ -109,7 +109,7 @@ def run_line(line):
         pprint.pprint(scope['cache'])
         return
         
-    stack = interpret(token_list, [])
+    stack = interpret(token_list)
     print(apply(stack))
 
 
