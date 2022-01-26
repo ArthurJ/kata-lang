@@ -19,24 +19,6 @@ def timer(msg="Exec time: {0:.7f}s"):
     return decorador
 
 
-
-
-r_words = {
-    'lambda':'LAMBDA', 'λ':'LAMBDA', 'let':'LET',
-    '(':'LEFT_PAREN', ')':'RIGHT_PAREN',
-    ',':'COMMA', '.':'DOT', ':':'COLON',
-    'otherwise':'OTHERWISE', 'with':'WITH', 'as':'AS',
-    '?':'QUESTION_MARK'
-}
-token_type = [
-    'LAMBDA', 'LET',
-    'IDENTIFIER', 'STRING', 'NUMBER', 
-    'LEFT_PAREN', 'RIGHT_PAREN',
-    'COMMA', 'DOT', 'COLON',
-    'OTHERWISE', 'WITH', 'AS',
-    'QUESTION_MARK'
-]
-
 #future -> (qtd_arg, {(type list):implementation})
 std_lib_funs = {
     '+': (2, lambda x,y: x+y),
@@ -52,7 +34,9 @@ std_lib_funs = {
     '>': (2, lambda x,y: x>y),
 }
 
-scope = {'cache':{}}
+scope = {'cache':{},
+         'functions':{'outer_scope':std_lib_funs},
+         'values':{}}
 
 def prompt():
     while True:
@@ -67,6 +51,25 @@ def literal_val(token):
     if token[0]=='STR': return token[1]
     if token[0]=='INT': return int(token[1])
     if token[0]=='FLOAT': return float(token[1])
+    if token[1] in scope: return scope[token[1]]
+    raise ValueError(f'{token[1]} not know')
+
+def is_literal(val):
+    if isinstance(val, tuple): return val[0] in ['STR', 'INT', 'FLOAT']
+    if isinstance(val, str): return True
+    if isinstance(val, int): return True
+    if isinstance(val, float): return True
+    if isinstance(val, bool): return True
+    return False
+
+def bind(symb, value, scope=scope):
+    if not symb[0]=='SYMB': raise ValueError('To bind a symbol is needed')
+    if is_literal(value):
+        scope[symb[1]]=literal_val(value)
+    elif value[1] in scope:
+        scope[symb[1]]=scope[value[1]]
+    else: #TODO accept expressions
+        raise ValueError('For now, just bind literal values')
 
 def interpret(token_list,stop=False, stack=None, fun_map=std_lib_funs):
     #breakpoint()
@@ -74,8 +77,12 @@ def interpret(token_list,stop=False, stack=None, fun_map=std_lib_funs):
     if not token_list: return stack
     
     token = token_list.pop(0)
-    
-    if token[0]=='SYMB':
+    if token[0]=='LET':
+        symb=token_list.pop(0)
+        value=token_list.pop(0)
+        bind(symb, value)
+        return stack
+    elif token[0]=='SYMB':
         if token[1] in fun_map:
             stack.append(fun_map[token[1]][1])
             for _ in range(fun_map[token[1]][0]):
@@ -83,9 +90,11 @@ def interpret(token_list,stop=False, stack=None, fun_map=std_lib_funs):
                     stack.append(interpret(token_list, True))
                 else: 
                     stack.append(literal_val(token_list.pop(0)))
+        elif token[1] in scope: # for now, variables only take values, not functions
+            stack.append(scope[token[1]])
         else:
-            print('Function not implemented')
-    else: # if literal
+            print('Unknown Symbol')
+    else:
         stack.append(literal_val(token))
     if stop: 
         return stack
@@ -94,7 +103,10 @@ def interpret(token_list,stop=False, stack=None, fun_map=std_lib_funs):
     return stack
 
 def apply(stack, scope=scope):
+    if not stack: return ''
     print(stack)
+    if is_literal(stack[0]):
+        return stack[0]
     for i, item in enumerate(stack):
         if isinstance(item, list):
             stack[i] = apply(stack[i])
@@ -109,11 +121,15 @@ def run_line(line):
     
     indent, token_list = tokenize(line)
     if token_list[0][1] == 'dir':
-        pprint.pprint(scope['cache'])
+        pprint.pprint(scope)
         return
-        
-    stack = interpret(token_list)
-    print(apply(stack))
+    
+    try:
+        stack = interpret(token_list)
+        print(apply(stack))
+    except Exception as e:
+        #breakpoint()
+        print(f'Error: {e}')
 
 
 if __name__ == '__main__':
