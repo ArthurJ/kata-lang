@@ -34,9 +34,48 @@ std_lib_funs = {
     '>': (2, lambda x,y: x>y),
 }
 
-scope = {'cache':{},
-         'functions':{'outer_scope':std_lib_funs},
-         'values':{}}
+class Scope:
+    def __init__(self, values=None, 
+                 functions=std_lib_funs, cache=None, 
+                 outer_scope=None) -> None:
+        self.__cache__ = cache or {}
+        self.__values__ = values or {}
+        self.__functions__ = functions or {}
+        if outer_scope:
+            self.__cache__.update(outer_scope.cache)
+            self.__values__.update(outer_scope.values)
+            self.__functions__.update(outer_scope.functions)
+    
+    @property
+    def functions(self):
+        # As funções podem mudar, 
+        # mas os resultados do lambda no cache se mantém pois o lambda ao qual se referem é a chave
+        # assim não é necessário atualizar o cache
+        return self.__functions__
+    
+    @property
+    def values(self):
+        return self.__values__
+    
+    @property
+    def cache(self):
+        return self.__cache__
+    
+    def __contains__(self, value):
+        return value in self.cache \
+                or value in self.__functions__ \
+                or value in self.__values__
+    
+    def __str__(self):
+        return 'Functions:\n'\
+                + pprint.pformat(self.functions).replace('\n','\n ')\
+                + '\nCache:\n'\
+                + pprint.pformat(self.__cache__).replace('\n','\n ')\
+                + '\nValues:\n'\
+                + pprint.pformat(self.__values__).replace('\n','\n ')
+
+
+scope = Scope()
 
 def prompt():
     while True:
@@ -55,78 +94,69 @@ def literal_val(token):
     raise ValueError(f'{token[1]} not know')
 
 def is_literal(val):
-    if isinstance(val, tuple): return val[0] in ['STR', 'INT', 'FLOAT']
-    if isinstance(val, str): return True
-    if isinstance(val, int): return True
-    if isinstance(val, float): return True
-    if isinstance(val, bool): return True
+    if isinstance(val, tuple): return val[0] in ['STR', 'INT', 'FLOAT', 'BOOL']
     return False
 
-def bind(symb, value, scope=scope):
-    if not symb[0]=='SYMB': raise ValueError('To bind a symbol is needed')
-    if is_literal(value):
-        scope[symb[1]]=literal_val(value)
-    elif value[1] in scope:
-        scope[symb[1]]=scope[value[1]]
-    else: #TODO accept expressions
-        raise ValueError('For now, just bind literal values')
 
-def interpret(token_list,stop=False, stack=None, fun_map=std_lib_funs):
+'''
+0
++ 1 1
++ 1 - 5 4
+let x 0
+let y - 4 8
+'''
+def interpret(token_list, scope=scope):
+    if not token_list: return []
     #breakpoint()
-    if not stack: stack=[]
-    if not token_list: return stack
+    root = token_list.pop(0)
+    if root[0]=='LET':
+        return ['LET', interpret(token_list, scope)]
+    elif is_literal(root): return root
+    elif root[1] in scope.functions:
+        arg_qtd, _lambda= scope.functions[root[1]]
+        args = []
+        for _ in range(arg_qtd):
+            args.append(interpret(token_list, scope))
+        return [_lambda, args]  # [root, args]
+    elif root[1] in scope.values:
+        return scope.values[root[1]]
+    elif root[0]=='SYMB': return [root, interpret(token_list, scope)]
     
-    token = token_list.pop(0)
-    if token[0]=='LET':
-        symb=token_list.pop(0)
-        value=token_list.pop(0)
-        bind(symb, value)
-        return stack
-    elif token[0]=='SYMB':
-        if token[1] in fun_map:
-            stack.append(fun_map[token[1]][1])
-            for _ in range(fun_map[token[1]][0]):
-                if token_list[0][1] in fun_map:
-                    stack.append(interpret(token_list, True))
-                else: 
-                    stack.append(literal_val(token_list.pop(0)))
-        elif token[1] in scope: # for now, variables only take values, not functions
-            stack.append(scope[token[1]])
-        else:
-            print('Unknown Symbol')
-    else:
-        stack.append(literal_val(token))
-    if stop: 
-        return stack
-    interpret(token_list, stack=stack)
-    
-    return stack
+    raise ValueError('Something went wrong with your expression')
 
-def apply(stack, scope=scope):
+
+def bind(symb, val, scope=scope): # sempre guarda expressões
+    if not symb[0]=='SYMB': raise ValueError('To bind a symbol is needed')
+    scope.values[symb[1]]=val 
+
+
+def eval(stack, scope=scope):
+    #breakpoint()
+    #print(stack)
     if not stack: return ''
-    print(stack)
-    if is_literal(stack[0]):
-        return stack[0]
-    for i, item in enumerate(stack):
-        if isinstance(item, list):
-            stack[i] = apply(stack[i])
-    if (stack[0], tuple(stack[1:])) in scope['cache']:
-        return scope['cache'][(stack[0], tuple(stack[1:]))]
-    scope['cache'][(stack[0], tuple(stack[1:]))] = (result:=stack[0] (*stack[1:]))
-    return result
-
+    if is_literal(stack): return literal_val(stack)
+    if stack[0]=='LET': 
+        bind(*stack[1], scope)
+        return stack
+    if callable(stack[0]):
+        scope.cache[(stack[0],tuple(stack[1]))] = \
+            scope.cache.get((stack[0],tuple(stack[1])),
+                            stack[0](*[eval(x, scope) for x in stack[1]]))
+        return scope.cache[(stack[0],tuple(stack[1]))]
+    if stack[0]=='SYMB' and stack[1] not in scope.values:
+        raise ValueError('Unknown symbol')
+    raise Exception('Something wrong is not write')
 
 @timer()
 def run_line(line):
     
     indent, token_list = tokenize(line)
     if token_list[0][1] == 'dir':
-        pprint.pprint(scope)
+        print(scope)
         return
-    
     try:
         stack = interpret(token_list)
-        print(apply(stack))
+        print(eval(stack))
     except Exception as e:
         #breakpoint()
         print(f'Error: {e}')

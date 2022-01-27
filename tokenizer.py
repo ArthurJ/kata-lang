@@ -48,12 +48,20 @@ def tokenize(line):
 
 # para o futuro
 r_words = {
-    'lambda':'LAMBDA', 'λ':'LAMBDA', 'let':'LET',
-    '(':'LEFT_PAREN', ')':'RIGHT_PAREN',
-    ',':'COMMA', '.':'DOT', ':':'COLON',
-    'otherwise':'OTHERWISE', 'with':'WITH', 'as':'AS',
-    '?':'QUESTION_MARK'
+    'let':'LET',
+    'lambda':'LAMBDA', 
+    'λ':'LAMBDA', 
+    '(':'LEFT_PAREN', 
+    ')':'RIGHT_PAREN',
+    ',':'COMMA', 
+    '.':'DOT', 
+    ':':'COLON',
+    'as':'AS',
+    'with':'WITH', 
+    '?':'QUESTION_MARK',
+    'otherwise':'OTHERWISE' 
 }
+
 token_type = [
     'LAMBDA', 'LET',
     'IDENTIFIER', 'STRING', 'NUMBER', 
