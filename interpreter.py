@@ -2,6 +2,7 @@ from time import process_time
 from functools import wraps
 
 import pprint
+from prompt_toolkit import PromptSession
 
 from tokenizer import tokenize
 
@@ -18,6 +19,8 @@ def timer(msg="Exec time: {0:.7f}s"):
         return wrapper
     return decorador
 
+def tupleit(l):
+    return tuple(map(tupleit, l)) if isinstance(l, (list, tuple)) else l
 
 #future -> (qtd_arg, {(type list):implementation})
 std_lib_funs = {
@@ -78,9 +81,10 @@ class Scope:
 scope = Scope()
 
 def prompt():
+    session =  PromptSession()
     while True:
         try:
-            line = input('-> ')
+            line = session.prompt('-> ')
         except EOFError: 
             break
         run_line(line)
@@ -131,7 +135,6 @@ def bind(symb, val, scope=scope): # sempre guarda expressões
 
 
 def eval(stack, scope=scope):
-    #breakpoint()
     #print(stack)
     if not stack: return ''
     if is_literal(stack): return literal_val(stack)
@@ -139,13 +142,13 @@ def eval(stack, scope=scope):
         bind(*stack[1], scope)
         return stack
     if callable(stack[0]):
-        scope.cache[(stack[0],tuple(stack[1]))] = \
-            scope.cache.get((stack[0],tuple(stack[1])),
+        scope.cache[stack] = \
+            scope.cache.get(stack, 
                             stack[0](*[eval(x, scope) for x in stack[1]]))
-        return scope.cache[(stack[0],tuple(stack[1]))]
+        return scope.cache[stack]
     if stack[0]=='SYMB' and stack[1] not in scope.values:
         raise ValueError('Unknown symbol')
-    raise Exception('Something wrong is not write')
+    raise Exception('Something wrong is not right')
 
 @timer()
 def run_line(line):
@@ -155,7 +158,7 @@ def run_line(line):
         print(scope)
         return
     try:
-        stack = interpret(token_list)
+        stack = tupleit(interpret(token_list))
         print(eval(stack))
     except Exception as e:
         #breakpoint()
