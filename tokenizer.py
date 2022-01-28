@@ -35,6 +35,7 @@ def tokenize(line):
             
             label = 'SYMB'
             if i=='let': label='LET'
+            elif i in ['True','False']: 'BOOL'
             elif lit_float.match(i): label='FLOAT'
             elif lit_int.match(i): label='INT'
             
@@ -44,7 +45,6 @@ def tokenize(line):
     return indent_qtd, sub_split
 
 
-# para criar funções, é preciso lidar com os símbolos de argumentos
 
 # para o futuro
 r_words = {

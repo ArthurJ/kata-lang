@@ -38,8 +38,8 @@ std_lib_funs = {
 }
 
 class Scope:
-    def __init__(self, values=None, 
-                 functions=std_lib_funs, cache=None, 
+    def __init__(self, values=None,
+                 functions=std_lib_funs, cache=None,
                  outer_scope=None) -> None:
         self.__cache__ = cache or {}
         self.__values__ = values or {}
@@ -48,27 +48,27 @@ class Scope:
             self.__cache__.update(outer_scope.cache)
             self.__values__.update(outer_scope.values)
             self.__functions__.update(outer_scope.functions)
-    
+
     @property
     def functions(self):
         # As funções podem mudar, 
         # mas os resultados do lambda no cache se mantém pois o lambda ao qual se referem é a chave
         # assim não é necessário atualizar o cache
         return self.__functions__
-    
+
     @property
     def values(self):
         return self.__values__
-    
+
     @property
     def cache(self):
         return self.__cache__
-    
+
     def __contains__(self, value):
         return value in self.cache \
                 or value in self.__functions__ \
                 or value in self.__values__
-    
+
     def __str__(self):
         return 'Functions:\n'\
                 + pprint.pformat(self.functions).replace('\n','\n ')\
@@ -85,7 +85,7 @@ def prompt():
     while True:
         try:
             line = session.prompt('-> ')
-        except EOFError: 
+        except EOFError:
             break
         run_line(line)
 
@@ -94,6 +94,7 @@ def literal_val(token):
     if token[0]=='STR': return token[1]
     if token[0]=='INT': return int(token[1])
     if token[0]=='FLOAT': return float(token[1])
+    if token[0]=='BOOL': return token[1]=='True'
     if token[1] in scope: return scope[token[1]]
     raise ValueError(f'{token[1]} not know')
 
@@ -125,25 +126,25 @@ def interpret(token_list, scope=scope):
     elif root[1] in scope.values:
         return scope.values[root[1]]
     elif root[0]=='SYMB': return [root, interpret(token_list, scope)]
-    
+
     raise ValueError('Something went wrong with your expression')
 
 
 def bind(symb, val, scope=scope): # sempre guarda expressões
     if not symb[0]=='SYMB': raise ValueError('To bind a symbol is needed')
-    scope.values[symb[1]]=val 
+    scope.values[symb[1]]=val
 
 
 def eval(stack, scope=scope):
     #print(stack)
     if not stack: return ''
     if is_literal(stack): return literal_val(stack)
-    if stack[0]=='LET': 
+    if stack[0]=='LET':
         bind(*stack[1], scope)
         return stack
     if callable(stack[0]):
         scope.cache[stack] = \
-            scope.cache.get(stack, 
+            scope.cache.get(stack,
                             stack[0](*[eval(x, scope) for x in stack[1]]))
         return scope.cache[stack]
     if stack[0]=='SYMB' and stack[1] not in scope.values:
@@ -152,7 +153,6 @@ def eval(stack, scope=scope):
 
 @timer()
 def run_line(line):
-    
     indent, token_list = tokenize(line)
     if token_list[0][1] == 'dir':
         print(scope)
@@ -161,7 +161,6 @@ def run_line(line):
         stack = tupleit(interpret(token_list))
         print(eval(stack))
     except Exception as e:
-        #breakpoint()
         print(f'Error: {e}')
 
 
