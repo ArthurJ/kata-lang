@@ -21,9 +21,9 @@ lit_int=re.compile('[+-]?'
 def tokenize(line):
     line = commented(line)
     indent_qtd, line = indented(line)
-    
+
     line = lit_str.split(line)
-    
+
     sub_split = []
     for item in line:
         if lit_str.match(item):
@@ -32,16 +32,16 @@ def tokenize(line):
         for i in item.split():
             # this strategy is too agressive, TODO change it
             i=i.replace('(','').replace(')','').replace(',','')
-            
+
             label = 'SYMB'
             if i=='let': label='LET'
-            elif i in ['True','False']: 'BOOL'
+            elif i in ['True','False']: label='BOOL'
             elif lit_float.match(i): label='FLOAT'
             elif lit_int.match(i): label='INT'
-            
+
             if i:
                 sub_split.append((label, i))
-    
+
     return indent_qtd, sub_split
 
 
