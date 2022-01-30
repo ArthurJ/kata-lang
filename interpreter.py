@@ -2,9 +2,16 @@ from time import process_time
 from functools import wraps
 
 import pprint
+from rich.console import Console
+from rich.traceback import install
+install()
+
 from prompt_toolkit import PromptSession
+from prompt_toolkit.lexers import PygmentsLexer
+from pygments.lexers.lisp import CommonLispLexer as LispLexer
 
 from tokenizer import tokenize
+
 
 def timer(msg="Exec time: {0:.7f}s"):
     def decorador(method):
@@ -35,6 +42,9 @@ std_lib_funs = {
     '>=':(2, lambda x,y:x>=y),
     '<': (2, lambda x,y: x<y),
     '>': (2, lambda x,y: x>y),
+    'and': (2, lambda x,y: x and y),
+    'or': (2, lambda x,y: x or y),
+    'not': (1, lambda x: not x),
 }
 
 class Scope:
@@ -70,24 +80,28 @@ class Scope:
                 or value in self.__values__
 
     def __str__(self):
-        return 'Functions:\n'\
+        return 'Functions:\n '\
                 + pprint.pformat(self.functions).replace('\n','\n ')\
-                + '\nCache:\n'\
+                + '\n\nCache:\n '\
                 + pprint.pformat(self.__cache__).replace('\n','\n ')\
-                + '\nValues:\n'\
-                + pprint.pformat(self.__values__).replace('\n','\n ')
+                + '\n\nValues:\n '\
+                + pprint.pformat(self.__values__).replace('\n','\n ')\
+                + '\n'
 
 
 scope = Scope()
 
 def prompt():
     session =  PromptSession()
+    print_fun = Console().print
+    breakpoint()
+
     while True:
         try:
-            line = session.prompt('-> ')
+            line = session.prompt('-> ', lexer=PygmentsLexer(LispLexer))
         except EOFError:
             break
-        run_line(line)
+        if line: run_line(line, print_fun)
 
 
 def literal_val(token):
@@ -108,7 +122,13 @@ def is_literal(val):
 + 1 1
 + 1 - 5 4
 let x 0
+x
 let y - 4 8
+y
+let k False
+k
+or k True
+and True not k
 '''
 def interpret(token_list, scope=scope):
     if not token_list: return []
@@ -152,16 +172,17 @@ def eval(stack, scope=scope):
     raise Exception('Something wrong is not right')
 
 @timer()
-def run_line(line):
+def run_line(line, print_fun=None):
+    if not print_fun: print_fun=print
     indent, token_list = tokenize(line)
     if token_list[0][1] == 'dir':
-        print(scope)
+        print_fun(scope)
         return
     try:
         stack = tupleit(interpret(token_list))
-        print(eval(stack))
+        print_fun(eval(stack))
     except Exception as e:
-        print(f'Error: {e}')
+        print_fun(f'Error: {e}')
 
 
 if __name__ == '__main__':
