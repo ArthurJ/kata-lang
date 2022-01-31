@@ -1,11 +1,12 @@
 from time import process_time
 from functools import wraps
 
+from tokenizer import tokenize
+
 from prompt_toolkit import PromptSession
 from prompt_toolkit.lexers import PygmentsLexer
 from pygments.lexers.lisp import CommonLispLexer as LispLexer
 
-from tokenizer import tokenize
 import pprint
 from rich.console import Console
 from rich.traceback import install
