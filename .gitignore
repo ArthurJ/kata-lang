@@ -109,6 +109,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.pdm.toml
+pdm.lock
 
 # Spyder project settings
 .spyderproject
