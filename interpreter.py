@@ -1,17 +1,16 @@
 from time import process_time
 from functools import wraps
 
-import pprint
-from rich.console import Console
-from rich.traceback import install
-
-install()
-
 from prompt_toolkit import PromptSession
 from prompt_toolkit.lexers import PygmentsLexer
 from pygments.lexers.lisp import CommonLispLexer as LispLexer
 
 from tokenizer import tokenize
+import pprint
+from rich.console import Console
+from rich.traceback import install
+
+install()
 
 
 def timer(msg="Exec time: {0:.7f}s"):
@@ -30,8 +29,8 @@ def timer(msg="Exec time: {0:.7f}s"):
     return decorador
 
 
-def tupleit(l):
-    return tuple(map(tupleit, l)) if isinstance(l, (list, tuple)) else l
+def tupleit(tre):
+    return tuple(map(tupleit, tre)) if isinstance(tre, (list, tuple)) else tre
 
 
 # future -> (qtd_arg, {(type list):implementation})
@@ -68,7 +67,8 @@ class Scope:
     @property
     def functions(self):
         # As funções podem mudar,
-        # mas os resultados do lambda no cache se mantém pois o lambda ao qual se referem é a chave
+        # mas os resultados do lambda no cache se mantém pois
+        # o lambda ao qual se referem é a chave
         # assim não é necessário atualizar o cache
         return self.__functions__
 
@@ -105,7 +105,6 @@ scope = Scope()
 def prompt():
     session = PromptSession()
     print_fun = Console().print
-    # breakpoint()
 
     while True:
         try:
