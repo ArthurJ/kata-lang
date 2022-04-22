@@ -1,0 +1,95 @@
+let y 'Oi mundão! "tudo bom?"' 'e ai?' 11 #12
+    let x::NUM 0.001 # uhulll ahhhh e aeeeee
+    let z::NUM 16e35 # uhulll ahhhh e aeeeee
+    let w::NUM 0.001#uhulll ahhhh e aeeeee
+    let a::Int
+    let b::Float
+    let c::Str
+    test k 'kk'
+    test y f'kk'
+#----------------
+alet x 1 #! SYMB SYMB NUM
+    alet x 1 #! SYMB SYMB NUM
+
+
+#NUM
+A1
+77z6 #!DO NOT DETECT
+11E #!DO NOT DETECT
+0. #!DO NOT DETECT
+
+
+#INT
+0
+0 0
+0  0
+ 0 0
+ 0  0
+10
+-689
+-2 0
+-2  0
+ -2 0
++33
+100_000_000
+
+
+#INT ENG
+ 1e0
+10e5
+-689e-12
+-2e4 120e44
+
+
+#FLOAT
+  1.1
+0.112
+112.112
+ 112.1
+.125
+.1
+.99
+#----------------
+
+
+#FLOAT ENG
+1.1e5
+1.1e5
+0.112e12
+.125E98 112.112e1
+.1_005e4_601
+#----------------
+
+
+#binary
+ 0b10011
+-0b1100
++0b1110110
++0b111_111
+#----------------
++0b110. #!DO NOT DETECT
+0B1 #!DO NOT DETECT
+0b #!DO NOT DETECT
+-0b #!DO NOT DETECT
+
+
+#octal
+0o1234567
+-0o1234567
+-0o123_4567
+#----------------
+0O1234567 #!DO NOT DETECT
+0o12345678 #!DO NOT DETECT
+0o #!DO NOT DETECT
+
+
+#hexadecimal
+0xFFFFF
+-0xdffff
+0x0123456789abcdef
+0xAbcDEf
+0xAbc_DEf
+#----------------
+0x1AEFg #!DO NOT DETECT
+0Xa #!DO NOT DETECT
+0XA #!DO NOT DETECT
