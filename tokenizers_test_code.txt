@@ -2,9 +2,9 @@ let y 'Oi mundão! "tudo bom?"' 'e ai?' 11 #12
     let x::NUM 0.001 # uhulll ahhhh e aeeeee
     let z::NUM 16e35 # uhulll ahhhh e aeeeee
     let w::NUM 0.001#uhulll ahhhh e aeeeee
-    let a::Int
-    let b::Float
-    let c::Str
+    let a::Int 5::Int
+    let b::Float 12
+    let c::Str 'String de teste'
     test k 'kk'
     test y f'kk'
 #----------------

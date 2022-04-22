@@ -25,13 +25,16 @@ token_patterns = {
     "HEX": re.compile(
         r"(?:(?<=^)|(?<=\s))([+-]?0x(?:[\da-fA-F]_?)+)(?:(?=\s)|(?=$))"
     ),  # noqa: E501
-    "TYPED_THING": re.compile(r"(?:(?<=^)|(?<=\s))(\w+::\w+)(?:(?=\s)|(?=$))"),
-    "SYMB": re.compile(r"(?:(?<=^)|(?<=\s))([a-z]\w*)(?:(?=\s)|(?=$))"),
-    "TYPE": re.compile(r"([A-Z][a-z]+)"),
-    "INTERFACE": re.compile(r"([A-Z][A-Z0-9]*)"),
+    "SYMBOL": re.compile(r"(?:(?<=^)|(?<=\s))([a-z]\w*)(?:(?=\s)|(?=$))"),
+    "TYPED_SYMBOL": re.compile(
+        r"(?:(?<=^)|(?<=\s))([a-z]\w*::\w+)(?:(?=\s)|(?=$))"
+    ),  # noqa: E501
+    "TYPED_VAL": re.compile(r"(?:(?<=^)|(?<=\s))(.+::\w+)(?:(?=\s)|(?=$))"),
+    "TYPE": re.compile(r"(?:(?<=^)|(?<=\s))([A-Z][a-z]+)(?:(?=\s)|(?=$))"),
+    "INTERFACE": re.compile(
+        r"(?:(?<=^)|(?<=\s))([A-Z][A-Z0-9]*)(?:(?=\s)|(?=$))"
+    ),  # noqa: E501
 }
-# TODO ? #'TYPED_VAL': 5::Int, 12::Float, 9::NUM
-# TODO ? #'TYPED_VAR': a::NUM, b::Str
 
 
 @dataclass
@@ -65,10 +68,10 @@ def flatten(itr):
                 yield x
 
 
-def tthing_parse(thing):
+def typed_parser(thing):
     if isinstance(thing, str):
         return thing
-    if thing.token_type != "TYPED_THING":
+    if thing.token_type not in ("TYPED_SYMBOL", "TYPED_VAL"):
         return thing
 
     val_and_type = thing.value.split("::")
@@ -76,8 +79,7 @@ def tthing_parse(thing):
         val_and_type = list(
             replacer(val_and_type, token_patterns[tok_type], tok_type)
         )  # noqa: E501
-    print(val_and_type)
-    return thing
+    return val_and_type
 
 
 def tokenize_code(code):
@@ -89,14 +91,13 @@ def tokenize_code(code):
                 replacer(line, token_patterns[tok_type], tok_type)
             )  # noqa: E501
             # print('\ttokenize_code depois->',lines[idx])
-            if tok_type == "TYPED_THING":
-                # print('\ttokenize_code [typed_things] antes ->', lines[idx])
-                lines[idx] = [tthing_parse(token) for token in lines[idx]]  # noqa: E501
-                # print('\ttokenize_code [typed_things] depois ->', lines[idx])
-    # TODO token para símbolos quebrando os strings que sobram
+            if tok_type in ("TYPED_SYMBOL", "TYPED_VAL"):
+                lines[idx] = list(
+                    flatten([typed_parser(tok) for tok in lines[idx]])
+                )  # noqa: E501
     # VER RESULTADOS
-    # for line in lines:
-    #   print(line)
+    for line in lines:
+        print(line)
 
 
 # -----------------------------------------------------------------------------
