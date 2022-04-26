@@ -3,18 +3,20 @@ import re
 
 
 token_patterns = {
-    "SHEBANG": re.compile(r"#(!.*$)"),
-    "COMMENT": re.compile(r"#.*$"),
-    #
-    "INDENT": re.compile(r"(^[\t ]+)"),
+    "COMMENT": re.compile(r"(#.*)$"),
+    # "SHEBANG": re.compile(r"(#\!.*)"),
+    "INDENT": re.compile(r"^([\t ]+)"),
     #
     "STR": re.compile(r"(?:(?<=^)|(?<=\s))'(.*?)'(?:(?=\s)|(?=$))"),
     "F_STR": re.compile(r"(?:(?<=^)|(?<=\s))f'(.*?)'(?:(?=\s)|(?=$))"),
+    # R_STR? BYTES?
     #
     "LET": re.compile(r"(?:(?<=^)|(?<=\s))(let)(?=\s)"),
     # "LAMBDA": re.compile(r"(?:(?<=^)|(?<=\s))(lambda)(?=\s)"),
     # "ACTION": re.compile(r"(?:(?<=^)|(?<=\s))(action)(?=\s)"),
     #
+    # # KIS for now
+    # "NUM": re.compile(r"(?:(?<=^)|(?<=\s))([+-]?(?:\d+)(?:\.\d+)?)+(?:(?=\s)|(?=$))"),  # noqa: E501
     "INT": re.compile(
         r"(?:(?<=^)|(?<=\s))([+-]?(?:\d_?)+(?:[eE][+-]?(?:\d_?)+)?)(?:(?=\s)|(?=$))"  # noqa: E501
     ),  # INT base 10, INT eng
@@ -37,15 +39,19 @@ token_patterns = {
     # "UNDERSCORE": re.compile(
     #    r"(?:(?<=^)|(?<=\s))(_)(?:(?=\s)|(?=$))"),
     #
+    "TRUE": re.compile(r"(?:(?<=^)|(?<=\s))(true)(?:(?=\s)|(?=$))"),
+    "FALSE": re.compile(r"(?:(?<=^)|(?<=\s))(false)(?:(?=\s)|(?=$))"),
+    #
     "TYPED_SYMB": re.compile(r"(?:(?<=^)|(?<=\s))(\S+::\S+)(?:(?=\s)|(?=$))"),
     "SYMBOL": re.compile(
-        r"(?:(?<=^)|(?<=\s))([^\sA-Z0-9\+:\.\-]+)(?:(?=\s)|(?=$))"
+        r"(?:(?<=^)|(?<=\s))([^\sA-Z0-9\+:\.\-\'][^\s:\.\']*)(?:(?=\s)|(?=$))"
     ),  # noqa: E501
     #
     "TYPE": re.compile(r"(?:(?<=^)|(?<=\s))([A-Z][a-z]+)(?:(?=\s)|(?=$))"),
     "INTERFACE": re.compile(
-        r"(?:(?<=^)|(?<=\s))([A-Z][A-Z0-9]*)(?:(?=\s)|(?=$))"
+        r"(?:(?<=^)|(?<=\s))([A-Z]+)(?:(?=\s)|(?=$))"
     ),  # noqa: E501
+    "UNKNOWN": re.compile(r"(.*)"),
 }
 
 
@@ -53,18 +59,19 @@ token_patterns = {
 class Token:
     token_type: str
     value: str
+    source_line: str
 
 
-def replacer(str_tok_list, pattern, tok_type):
-    for idx, item in enumerate(str_tok_list):
+def replacer(str_tk_list, pattern, tk_type, line):
+    for idx, item in enumerate(str_tk_list):
         if not isinstance(item, Token):
             if found := pattern.findall(item):
-                str_tok_list[idx] = [
-                    Token(tok_type, i) if i in found else i
+                str_tk_list[idx] = [
+                    Token(tk_type, i, line) if i in found else i
                     for i in pattern.split(item)
-                    if i.strip()
+                    if (tk_type == "INDENT" or i.strip())
                 ]
-    return flatten(str_tok_list)
+    return flatten(str_tk_list)
 
 
 def flatten(itr):
@@ -82,32 +89,35 @@ def typed_parser(thing):
     if isinstance(thing, str) or thing.token_type != "TYPED_SYMB":
         return thing
     typed_value = thing.value.split("::")
+    line = thing.source_line
     # typed_value.reverse()
-    for tok_type in token_patterns.keys():
-        typed_value = list(
-            replacer(typed_value, token_patterns[tok_type], tok_type)
-        )  # noqa: E501
+    for tk_type, pattern in token_patterns.items():
+        typed_value = list(replacer(typed_value, pattern, tk_type, line))  # noqa: E501
     return typed_value
 
 
-def tokenize_code(code):
-    lines = [[line] for line in code]
-    for tok_type in token_patterns.keys():
-        for idx, line in enumerate(lines):
-            lines[idx] = list(
-                replacer(line, token_patterns[tok_type], tok_type)
-            )  # noqa: E501
-            if tok_type == "TYPED_SYMB":
-                lines[idx] = list(
-                    flatten([typed_parser(tok) for tok in lines[idx]])
+def tokenize(code, patterns):
+    for i, line in list(enumerate(code)):
+        code[i] = [line]
+        for tk_type, pattern in patterns.items():
+            code[i] = [
+                tok for tok in replacer(code[i], pattern, tk_type, line) if tok
+            ]  # noqa: E501
+            if tk_type == "TYPED_SYMB":
+                code[i] = list(
+                    flatten([typed_parser(tok) for tok in code[i]])
                 )  # noqa: E501
-    return lines
+    return [i for i in code if i]
 
 
 # -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    from pprint import pprint
+    from pprint import pp
 
-    with open("tokenizers_test_code.txt", "r") as test_code_file:
-        pprint(tokenize_code(test_code_file.read().splitlines()))
+    with open("tokenizers_test_code.txt", "r") as test_code:
+        pp(
+            tokenize(test_code.read().splitlines(), token_patterns),
+            width=80,
+            depth=2,
+        )

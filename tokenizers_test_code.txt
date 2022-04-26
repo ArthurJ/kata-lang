@@ -10,6 +10,11 @@ let y 'Oi mundão! "tudo bom?"' 'e ai?' 11 #12
 #----------------
 alet x 1 #! SYMB SYMB NUM
     alet x 1 #! SYMB SYMB NUM
+'e isso?
+
+#BOOL
+let b true
+let b2 false
 
 
 #NUM
