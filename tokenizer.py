@@ -3,8 +3,8 @@ import re
 
 
 token_patterns = {
-    "COMMENT": re.compile(r"(#.*)$"),
     # "SHEBANG": re.compile(r"(#\!.*)"),
+    "COMMENT": re.compile(r"(#.*)$"),
     "INDENT": re.compile(r"^([\t ]+)"),
     #
     "STR": re.compile(r"(?:(?<=^)|(?<=\s))'(.*?)'(?:(?=\s)|(?=$))"),
@@ -39,8 +39,7 @@ token_patterns = {
     # "UNDERSCORE": re.compile(
     #    r"(?:(?<=^)|(?<=\s))(_)(?:(?=\s)|(?=$))"),
     #
-    "TRUE": re.compile(r"(?:(?<=^)|(?<=\s))(true)(?:(?=\s)|(?=$))"),
-    "FALSE": re.compile(r"(?:(?<=^)|(?<=\s))(false)(?:(?=\s)|(?=$))"),
+    "BOOL": re.compile(r"(?:(?<=^)|(?<=\s))(true|false)(?:(?=\s)|(?=$))"),
     #
     "TYPED_SYMB": re.compile(r"(?:(?<=^)|(?<=\s))(\S+::\S+)(?:(?=\s)|(?=$))"),
     "SYMBOL": re.compile(
@@ -63,10 +62,10 @@ class Token:
 
 
 def replacer(str_tk_list, pattern, tk_type, line):
-    for idx, item in enumerate(str_tk_list):
+    for index, item in enumerate(str_tk_list):
         if not isinstance(item, Token):
             if found := pattern.findall(item):
-                str_tk_list[idx] = [
+                str_tk_list[index] = [
                     Token(tk_type, i, line) if i in found else i
                     for i in pattern.split(item)
                     if (tk_type == "INDENT" or i.strip())
@@ -85,13 +84,13 @@ def flatten(itr):
                 yield x
 
 
-def typed_parser(thing):
+def typed_parser(thing, patterns):
     if isinstance(thing, str) or thing.token_type != "TYPED_SYMB":
         return thing
     typed_value = thing.value.split("::")
     line = thing.source_line
     # typed_value.reverse()
-    for tk_type, pattern in token_patterns.items():
+    for tk_type, pattern in patterns.items():
         typed_value = list(replacer(typed_value, pattern, tk_type, line))  # noqa: E501
     return typed_value
 
@@ -105,7 +104,7 @@ def tokenize(code, patterns):
             ]  # noqa: E501
             if tk_type == "TYPED_SYMB":
                 code[i] = list(
-                    flatten([typed_parser(tok) for tok in code[i]])
+                    flatten([typed_parser(tok, patterns) for tok in code[i]])
                 )  # noqa: E501
     return [i for i in code if i]
 
