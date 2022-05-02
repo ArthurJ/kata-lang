@@ -96,7 +96,7 @@ def typed_parser(thing, patterns):
 
 
 def tokenize(code, patterns):
-    for i, line in list(enumerate(code)):
+    for i, line in enumerate(code):
         code[i] = [line]
         for tk_type, pattern in patterns.items():
             code[i] = [

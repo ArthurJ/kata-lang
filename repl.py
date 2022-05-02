@@ -1,7 +1,7 @@
 from time import process_time
 from functools import wraps
 
-from tokenizer import tokenize
+from tokenizer import tokenize, token_patterns as patterns
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.lexers import PygmentsLexer
@@ -45,7 +45,7 @@ def run_line(line, print_fun=None):
     if not print_fun:
         print_fun = print
     try:
-        print_fun(tokenize(line))
+        print_fun(tokenize(line, patterns))
     except Exception as e:
         print_fun(f"Error: {e}")
     return line

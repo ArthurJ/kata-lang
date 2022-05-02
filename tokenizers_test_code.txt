@@ -1,7 +1,7 @@
 let y 'Oi mundão! "tudo bom?"' 'e ai?' 11 #12
     let x::NUM 0.001 # uhulll ahhhh e aeeeee
     let z::NUM 16e35 # uhulll ahhhh e aeeeee
-    let w::NUM 0.001#uhulll ahhhh e aeeeee
+    let w::NUM 0.001 # uhulll ahhhh e aeeeee
     let a::Int 5::Int
     let b::Float 12
     let c::Str 'String de teste'
@@ -17,11 +17,11 @@ let b true
 let b2 false
 
 
-#NUM
+#ERROS NUM
 A1
-77z6 #!DO NOT DETECT
-11E #!DO NOT DETECT
-0. #!DO NOT DETECT
+77z6
+11E
+0.
 
 
 #INT
@@ -71,21 +71,21 @@ A1
 -0b1100
 +0b1110110
 +0b111_111
-#----------------
-+0b110. #!DO NOT DETECT
-0B1 #!DO NOT DETECT
-0b #!DO NOT DETECT
--0b #!DO NOT DETECT
+#-----ERROS:-------
++0b110.
+0B1
+0b
+-0b
 
 
 #octal
 0o1234567
 -0o1234567
 -0o123_4567
-#----------------
-0O1234567 #!DO NOT DETECT
-0o12345678 #!DO NOT DETECT
-0o #!DO NOT DETECT
+#-----ERROS:-------
+0O1234567
+0o12345678
+0o
 
 
 #hexadecimal
@@ -94,7 +94,7 @@ A1
 0x0123456789abcdef
 0xAbcDEf
 0xAbc_DEf
-#----------------
-0x1AEFg #!DO NOT DETECT
-0Xa #!DO NOT DETECT
-0XA #!DO NOT DETECT
+#-----ERROS:-------
+0x1AEFg
+0Xa
+0XA
