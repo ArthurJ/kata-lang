@@ -2,6 +2,7 @@ from time import process_time
 from functools import wraps
 
 from tokenizer import tokenize, token_patterns as patterns
+from interpreter import interpret, create_stack
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.lexers import PygmentsLexer
@@ -9,6 +10,8 @@ from pygments.lexers.lisp import CommonLispLexer as LispLexer
 
 from rich.console import Console
 from rich.traceback import install
+
+from toolbox import LangException
 
 
 def timer(msg="Exec time: {0:.7f}s"):
@@ -42,13 +45,17 @@ def prompt():
 
 @timer()
 def run_line(line, print_fun=None):
+    res = ""
     if not print_fun:
         print_fun = print
     try:
-        print_fun(tokenize(line, patterns))
-    except Exception as e:
-        print_fun(f"Error: {e}")
-    return line
+        # breakpoint()
+        stack = create_stack(tokenize(line, patterns)[0], [])
+        res = interpret(stack)
+        print_fun(res)
+    except LangException as e:
+        print_fun(f"{e}")
+    return res
 
 
 if __name__ == "__main__":
