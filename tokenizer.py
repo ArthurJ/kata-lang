@@ -42,6 +42,7 @@ token_patterns = {
     "BOOL": re.compile(r"(?:(?<=^)|(?<=\s))(true|false)(?:(?=\s)|(?=$))"),
     #
     "TYPED_SYMB": re.compile(r"(?:(?<=^)|(?<=\s))(\S+::\S+)(?:(?=\s)|(?=$))"),
+    "TYPED_SEP": re.compile(r"(?<=^)(::)(?=$)"),
     "SYMBOL": re.compile(
         r"(?:(?<=^)|(?<=\s))([^\sA-Z0-9:\.\'][^\s:\.\']*)(?:(?=\s)|(?=$))"
     ),  # noqa: E501
@@ -87,7 +88,7 @@ def flatten(itr):
 def typed_parser(thing, patterns):
     if isinstance(thing, str) or thing.token_type != "TYPED_SYMB":
         return thing
-    typed_value = thing.value.split("::")
+    typed_value = re.split("(::)", thing.value)
     line = thing.source_line
     # typed_value.reverse()
     for tk_type, pattern in patterns.items():
