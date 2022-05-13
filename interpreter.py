@@ -1,7 +1,12 @@
+from typing import List
 from toolbox import bidict, LangException
 from tokenizer import Token
 from pprint import pprint  # noqa: F401
 import pdb  # noqa: F401
+
+# TODO!
+# diferenciar Token do tokenizador
+# e token do interpretador
 
 value_types = {
     "FLOAT": {"converter": float, "type_name": "Float"},
@@ -18,7 +23,10 @@ interface_lambdas = {"NUM": ["+", "-", "*", "/"]}  # TODO Usar isso(?)
 
 # symbols
 lambdas = {
-    "+": {("NUM", "NUM"): (lambda x, y: x + y, "NUM")},
+    "+": {
+        ("NUM", "NUM"): (lambda x, y: x + y, "NUM"),
+        ("Str", "Str"): (lambda x, y: x + y, "Str"),
+    },
     "-": {("NUM", "NUM"): (lambda x, y: x - y, "NUM")},
     "*": {("NUM", "NUM"): (lambda x, y: x * y, "NUM")},
     "/": {("NUM", "NUM"): (lambda x, y: x / y, "NUM")},
@@ -29,8 +37,8 @@ ident = {"pi": (3.1415, "Float")}
 def execute_lambda(symbol, args):
     # pprint(args)
     # breakpoint()
-    arg_types = [arg.type_name for arg in args if arg]
     arg_qty = len(list(lambdas[symbol].items())[0])
+    arg_types = [arg.type_name for arg in args[:arg_qty] if arg]
     chosen_lambda, return_type = match_types(lambdas[symbol], arg_types)
     arg_values = [arg.value for arg in args[:arg_qty]]
     ret_val = Token(
@@ -59,8 +67,24 @@ def interpret(stack):
         if len(stack) == 2:
             if stack[0].token_type == "LAMBDA" and isinstance(stack[1], list):
                 return execute_lambda(stack[0].value, interpret(stack[1]))
+        if stack[0].token_type == "LET":
+            return do_bind(stack)
         return [interpret(s) for s in stack]
     raise LangException("Interpreter ERROR")
+
+
+def do_bind(stack):
+    # breakpoint()
+    stack.pop(0)
+    val_name = stack.pop(0).value
+    val_type = "Unknown"
+    if not isinstance(stack[0], list) and stack[0].token_type == "TYPED_SEP":
+        val_type = stack[1].value
+        stack.pop(0)
+        stack.pop(0)
+    value = interpret(stack)
+    ident[val_name] = (value.value, val_type)
+    return ""
 
 
 def match_types(lambda_map, arg_types):
@@ -81,26 +105,17 @@ def type_match(t1, t2):
     match = match or t1 == t2
     match = match or (
         t1 in interface_relations.inverse
-        and t1 == interface_relations[t2]  # noqa: E501
+        and t1 == interface_relations.get(t2)  # noqa: E501
     )
     match = match or (
         t2 in interface_relations.inverse
-        and t2 == interface_relations[t1]  # noqa: E501
+        and t2 == interface_relations.get(t2)  # noqa: E501
     )
     return match
 
 
-def set_symbol_definition(tok):
-    # print(tok)
-    if tok.value in lambdas.keys():
-        tok.token_type = "LAMBDA"
-    elif tok.value in ident.keys():
-        tok.token_type = "IDENT"
-    else:
-        raise LangException(f'ERROR: undefined symbol "{tok.value}"')
-
-
 def create_stack(token_list, stack):
+    # pprint(stack)
     # breakpoint()
     if not token_list:
         return stack
@@ -110,22 +125,75 @@ def create_stack(token_list, stack):
     if t.token_type == "UNKNOWN":
         raise LangException(f"Syntatic ERROR on {t.source_line}")
     if t.token_type == "SYMBOL":
-        set_symbol_definition(t)
-        if t.token_type == "LAMBDA":
-            stack.append([t, create_stack(token_list[1:], [])])
-            return [stack]
-        if t.token_type == "IDENT":
-            t.type_name = ident[t.value][1]
-            t.value = ident[t.value][0]
-            t.token_type = "VALUE"
-            stack.append(t)
-            return create_stack(token_list[1:], stack=stack)
+        return symbol_dealer(t, token_list, stack)
     if t.token_type in value_types.keys():
-        t.value = value_types[t.token_type]["converter"](t.value)
-        t.type_name = value_types[t.token_type]["type_name"]
+        return value_dealer(t, token_list, stack)
+    if t.token_type == "LET":
+        return bind_dealer(t, token_list, stack)
+    raise LangException(f"ERROR creating stack for '{t.source_line}'")
+
+
+# TODO transformar token de lexing em token de parsing
+def set_symbol_definition(tok):
+    # breakpoint()
+    if tok.value in lambdas.keys():
+        tok.token_type = "LAMBDA"
+    elif tok.value in ident.keys():
+        tok.token_type = "IDENT"
+    else:
+        raise LangException(f'ERROR: undefined symbol "{tok.value}"')
+    return tok
+
+
+def symbol_dealer(t, token_list, stack):
+    # breakpoint()
+    t = set_symbol_definition(t)
+    if t.token_type == "LAMBDA":
+        stack.append([t, create_stack(token_list[1:], [])])
+        return [stack]
+    if t.token_type == "IDENT":
+        t.type_name = ident[t.value][1]
+        t.value = ident[t.value][0]
         t.token_type = "VALUE"
         stack.append(t)
         return create_stack(token_list[1:], stack=stack)
 
 
-# bindings: acontecem dentro de actions, e no interpretador
+def value_dealer(t, token_list, stack):
+    # breakpoint()
+    t.value = value_types[t.token_type]["converter"](t.value)
+    t.type_name = value_types[t.token_type]["type_name"]
+    t.token_type = "VALUE"
+    stack.append(t)
+    return create_stack(token_list[1:], stack=stack)
+
+
+def bind_dealer(t, token_list, stack: List):
+    if not token_list[1].token_type == "SYMBOL":
+        raise LangException(
+            "ERROR: expecting a symbol to bind a "
+            'value to after "let" statement on '
+            f'line "{t.source_line}"'
+        )  # noqa: E501
+    stack.append(t)
+    stack.append(token_list[1])
+    if token_list[2].token_type == "TYPED_SEP":
+        if token_list[3].token_type not in ("INTERFACE", "TYPE"):
+            raise LangException(
+                "ERROR: typed symbol needs a "
+                f'type, not a "{t.value}"'
+                f'\nOn line "{t.source_line}"'
+            )  # noqa: E501
+        if (
+            token_list[3].value not in interface_relations.keys()
+            and token_list[3].value not in interface_relations.inverse.keys()
+        ):
+            raise LangException(
+                "ERROR: Unknown type or interface "
+                f'on line "{t.source_line}"'  # noqa: E501
+            )
+        stack.append(token_list[2])
+        stack.append(token_list[3])
+        return create_stack(token_list[4:], stack=stack)
+    else:
+        return create_stack(token_list[2:], stack=stack)
