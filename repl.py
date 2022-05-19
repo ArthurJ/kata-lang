@@ -1,8 +1,11 @@
 from time import process_time
 from functools import wraps
 
-from tokenizer import tokenize, token_patterns as patterns
-from interpreter import interpret, create_stack
+from tokenizer import tokenize
+from patterns import patterns
+from interpreter import interpret
+from interpreter import value_types, lambdas, ident, interface_relations
+from stacker import create_stack, nodefy
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.lexers import PygmentsLexer
@@ -11,7 +14,7 @@ from pygments.lexers.lisp import CommonLispLexer as LispLexer
 from rich.console import Console
 from rich.traceback import install
 
-from toolbox import LangException
+from toolbox import LangException, Scope
 
 
 def timer(msg="Exec time: {0:.7f}s"):
@@ -33,26 +36,28 @@ def timer(msg="Exec time: {0:.7f}s"):
 def prompt():
     session = PromptSession()
     print_fun = Console().print
-
+    scope = Scope(value_types, ident, interface_relations, lambdas)
     while True:
         try:
             line = session.prompt("-> ", lexer=PygmentsLexer(LispLexer))
         except EOFError:
             break
         if line:
-            run_line([line], print_fun)
+            run_line([line], scope, print_fun)
 
 
 @timer()
-def run_line(line, print_fun=None):
+def run_line(line, scope, print_fun=None):
     res = ""
     if not print_fun:
         print_fun = print
     try:
         # breakpoint()
-        stack = create_stack(tokenize(line, patterns)[0], [])
+        node_list = nodefy(tokenize(line, patterns)[0], lambdas, ident)
+        stack = create_stack(node_list, [], scope)
+        # print_fun(stack,'-'*80)
         res = interpret(stack)
-        print_fun(res)
+        print_fun(res, "\n")
     except LangException as e:
         print_fun(f"{e}")
     return res
